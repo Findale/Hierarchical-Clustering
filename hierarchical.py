@@ -9,7 +9,7 @@ import collections
 
 def distCalc(dataSet):
     """
-        Proximity matrix enumeration using basic distance function.
+        Proximity matrix enumeration using a Euclidean distance function.
             dataSet - Pandas dataframe of input txt file.
     """
     xVals = dataSet['Att1'].values.tolist()
@@ -24,7 +24,7 @@ def distCalc(dataSet):
 
 def flatten(l):
     """
-        Reads in irregular list, and outputs a generator object for flattening.
+        Reads in irregular list, and outputs a generator object to create a 1-dimensional list.
             l - irregular list of nd depth
     """
     for el in l:
@@ -32,6 +32,8 @@ def flatten(l):
             yield from flatten(el)
         else:
             yield el
+
+# CLUSTERING FUNCTIONS
 
 def aver(x, y, orig, xlen, ylen):
     total = xlen + ylen
@@ -47,6 +49,7 @@ def centr(x, y, orig, xlen, ylen):
     return xterm + yterm - zterm
 
 # FILE READS
+
 path = './data'
 all_files = glob.glob(path + "/*.txt")
 
@@ -59,10 +62,11 @@ for filename in all_files:
 # Distance calculation method choice
 funcs = [min, max, aver, centr]
 names = ['min', 'max', 'aver', 'centr']
-chosen = 2
+chosen = 1
 
 # MAIN LOGIC
 for dataSet, ind in zip(li, range(len(li))):
+    # Variable setup
     splits = [[i] for i in range(dataSet.shape[0])]
     distance = distCalc(dataSet)
 
@@ -72,8 +76,12 @@ for dataSet, ind in zip(li, range(len(li))):
         if chosen > 1:
             xlen = 1 if len(splits[combine[0]]) == 1 else len(list(flatten(splits[combine[0]])))
             ylen = 1 if len(splits[combine[1]]) == 1 else len(list(flatten(splits[combine[1]])))
+        
+        # Cluster Update
         splits[combine[0]].append([splits[combine[1]]])
         del splits[combine[1]]
+
+        # Distance Matrix Update
         for i in range(distance.shape[0]):
             if distance[combine[0], i] == 0 or distance[combine[1], i] == 0:
                 distance[combine[0], i] = 0
@@ -81,13 +89,13 @@ for dataSet, ind in zip(li, range(len(li))):
                 if chosen > 1:
                     orig = distance[combine[0], combine[1]]
                     distance[combine[0], i] = funcs[chosen](distance[combine[0], i], distance[combine[1], i], orig, xlen, ylen)
-                    distance[i, combine[0]] = distance[combine[0], i]
                 else:
                     distance[combine[0], i] = funcs[chosen](distance[combine[0], i], distance[combine[1], i])
-                    distance[i, combine[0]] = distance[combine[0], i]
+                distance[i, combine[0]] = distance[combine[0], i]
         distance = np.delete(distance, (combine[1]), axis=0)
         distance = np.delete(distance, (combine[1]), axis=1)
     
+    # Graphing Clusters
     xVals = dataSet['Att1'].values.tolist()
     yVals = dataSet['Att2'].values.tolist()
     colors = ['red', 'blue']
@@ -97,7 +105,8 @@ for dataSet, ind in zip(li, range(len(li))):
         splitY = [yVals[i] for i in split]
         plt.scatter(splitX, splitY, label='Split '+str(i), color=colors[i], s = 2)
 
+    # Graph formatting and output
     plt.legend(loc='upper left')
-    plt.savefig('graphs/' + names[chosen] + '/' + str(ind) + '.png')
     plt.title('Dataset ' + str(ind))
+    plt.savefig('graphs/' + names[chosen] + '/' + str(ind) + '.png')
     plt.clf()
